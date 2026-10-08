@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\DevisController;
 use App\Http\Controllers\InterventionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -26,4 +27,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/interventions', [InterventionController::class, 'store']);
     Route::put('/interventions/{id}', [InterventionController::class, 'update']);
     Route::delete('/interventions/{id}', [InterventionController::class, 'destroy']);
+
+    // Devis
+    Route::get('/devis', [DevisController::class, 'index']);
+    Route::post('/devis', [DevisController::class, 'store']);
 });

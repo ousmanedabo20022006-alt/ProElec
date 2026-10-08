@@ -18,19 +18,23 @@ class Entreprise extends Model
         'numero_tva',
     ];
 
-    /**
-     * Les utilisateurs appartenant à cette entreprise.
-     */
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
-    /**
-     * Les clients appartenant à cette entreprise.
-     */
     public function clients(): HasMany
     {
         return $this->hasMany(Client::class);
+    }
+
+    public function interventions(): HasMany
+    {
+        return $this->hasMany(Intervention::class);
+    }
+
+    public function devis(): HasMany
+    {
+        return $this->hasMany(Devis::class);
     }
 }
