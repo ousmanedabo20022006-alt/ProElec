@@ -25,4 +25,12 @@ class Entreprise extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    /**
+     * Les clients appartenant à cette entreprise.
+     */
+    public function clients(): HasMany
+    {
+        return $this->hasMany(Client::class);
+    }
 }
