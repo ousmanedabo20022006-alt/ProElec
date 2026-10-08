@@ -23,6 +23,27 @@ class DevisController extends Controller
         ]);
     }
 
+    public function show(Request $request, int $id)
+    {
+        $devis = Devis::where(
+            'entreprise_id',
+            $request->user()->entreprise_id
+        )
+        ->where('id', $id)
+        ->with(['client', 'intervention'])
+        ->first();
+
+        if (!$devis) {
+            return response()->json([
+                'message' => 'Devis introuvable.',
+            ], 404);
+        }
+
+        return response()->json([
+            'devis' => $devis,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -32,9 +53,18 @@ class DevisController extends Controller
                 'integer',
                 'exists:interventions,id',
             ],
-            'numero' => ['required', 'string', 'max:50', 'unique:devis,numero'],
+            'numero' => [
+                'required',
+                'string',
+                'max:50',
+                'unique:devis,numero',
+            ],
             'date_emission' => ['required', 'date'],
-            'date_validite' => ['nullable', 'date', 'after_or_equal:date_emission'],
+            'date_validite' => [
+                'nullable',
+                'date',
+                'after_or_equal:date_emission',
+            ],
             'statut' => [
                 'nullable',
                 'string',
