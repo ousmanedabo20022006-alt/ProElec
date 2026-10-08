@@ -32,4 +32,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/devis', [DevisController::class, 'index']);
     Route::get('/devis/{id}', [DevisController::class, 'show']);
     Route::post('/devis', [DevisController::class, 'store']);
+    Route::put('/devis/{id}', [DevisController::class, 'update']);
+    Route::delete('/devis/{id}', [DevisController::class, 'destroy']);
 });

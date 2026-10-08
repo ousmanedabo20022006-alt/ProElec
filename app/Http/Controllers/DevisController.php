@@ -132,4 +132,164 @@ class DevisController extends Controller
             'devis' => $devis->load(['client', 'intervention']),
         ], 201);
     }
+
+    public function update(Request $request, int $id)
+    {
+        $devis = Devis::where(
+            'entreprise_id',
+            $request->user()->entreprise_id
+        )
+        ->where('id', $id)
+        ->first();
+
+        if (!$devis) {
+            return response()->json([
+                'message' => 'Devis introuvable.',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'client_id' => [
+                'sometimes',
+                'required',
+                'integer',
+                'exists:clients,id',
+            ],
+            'intervention_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                'exists:interventions,id',
+            ],
+            'numero' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:50',
+                'unique:devis,numero,' . $devis->id,
+            ],
+            'date_emission' => [
+                'sometimes',
+                'required',
+                'date',
+            ],
+            'date_validite' => [
+                'sometimes',
+                'nullable',
+                'date',
+                'after_or_equal:date_emission',
+            ],
+            'statut' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'in:brouillon,envoye,accepte,refuse,expire',
+            ],
+            'montant_ht' => [
+                'sometimes',
+                'required',
+                'numeric',
+                'min:0',
+            ],
+            'taux_tva' => [
+                'sometimes',
+                'required',
+                'numeric',
+                'min:0',
+                'max:100',
+            ],
+            'montant_tva' => [
+                'sometimes',
+                'required',
+                'numeric',
+                'min:0',
+            ],
+            'montant_ttc' => [
+                'sometimes',
+                'required',
+                'numeric',
+                'min:0',
+            ],
+            'notes' => ['sometimes', 'nullable', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Les données fournies sont invalides.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        if ($request->has('client_id')) {
+            $clientExists = $request->user()
+                ->entreprise
+                ->clients()
+                ->where('id', $request->client_id)
+                ->exists();
+
+            if (!$clientExists) {
+                return response()->json([
+                    'message' => 'Client introuvable.',
+                ], 404);
+            }
+        }
+
+        if (
+            $request->has('intervention_id')
+            && $request->filled('intervention_id')
+        ) {
+            $interventionExists = $request->user()
+                ->entreprise
+                ->interventions()
+                ->where('id', $request->intervention_id)
+                ->exists();
+
+            if (!$interventionExists) {
+                return response()->json([
+                    'message' => 'Intervention introuvable.',
+                ], 404);
+            }
+        }
+
+        $devis->update($request->only([
+            'client_id',
+            'intervention_id',
+            'numero',
+            'date_emission',
+            'date_validite',
+            'statut',
+            'montant_ht',
+            'taux_tva',
+            'montant_tva',
+            'montant_ttc',
+            'notes',
+        ]));
+
+        return response()->json([
+            'message' => 'Devis modifié avec succès.',
+            'devis' => $devis->fresh()->load(['client', 'intervention']),
+        ]);
+    }
+
+    public function destroy(Request $request, int $id)
+    {
+        $devis = Devis::where(
+            'entreprise_id',
+            $request->user()->entreprise_id
+        )
+        ->where('id', $id)
+        ->first();
+
+        if (!$devis) {
+            return response()->json([
+                'message' => 'Devis introuvable.',
+            ], 404);
+        }
+
+        $devis->delete();
+
+        return response()->json([
+            'message' => 'Devis supprimé avec succès.',
+        ]);
+    }
 }
