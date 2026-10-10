@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Devis;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -48,33 +49,66 @@ class DevisController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'client_id' => ['required', 'integer', 'exists:clients,id'],
+
             'intervention_id' => [
                 'nullable',
                 'integer',
                 'exists:interventions,id',
             ],
+
             'numero' => [
                 'required',
                 'string',
                 'max:50',
                 'unique:devis,numero',
             ],
-            'date_emission' => ['required', 'date'],
+
+            'date_emission' => [
+                'required',
+                'date',
+            ],
+
             'date_validite' => [
                 'nullable',
                 'date',
                 'after_or_equal:date_emission',
             ],
+
             'statut' => [
                 'nullable',
                 'string',
                 'in:brouillon,envoye,accepte,refuse,expire',
             ],
-            'montant_ht' => ['required', 'numeric', 'min:0'],
-            'taux_tva' => ['required', 'numeric', 'min:0', 'max:100'],
-            'montant_tva' => ['required', 'numeric', 'min:0'],
-            'montant_ttc' => ['required', 'numeric', 'min:0'],
-            'notes' => ['nullable', 'string'],
+
+            'montant_ht' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'taux_tva' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:100',
+            ],
+
+            'montant_tva' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'montant_ttc' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'notes' => [
+                'nullable',
+                'string',
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -155,12 +189,14 @@ class DevisController extends Controller
                 'integer',
                 'exists:clients,id',
             ],
+
             'intervention_id' => [
                 'sometimes',
                 'nullable',
                 'integer',
                 'exists:interventions,id',
             ],
+
             'numero' => [
                 'sometimes',
                 'required',
@@ -168,29 +204,34 @@ class DevisController extends Controller
                 'max:50',
                 'unique:devis,numero,' . $devis->id,
             ],
+
             'date_emission' => [
                 'sometimes',
                 'required',
                 'date',
             ],
+
             'date_validite' => [
                 'sometimes',
                 'nullable',
                 'date',
                 'after_or_equal:date_emission',
             ],
+
             'statut' => [
                 'sometimes',
                 'nullable',
                 'string',
                 'in:brouillon,envoye,accepte,refuse,expire',
             ],
+
             'montant_ht' => [
                 'sometimes',
                 'required',
                 'numeric',
                 'min:0',
             ],
+
             'taux_tva' => [
                 'sometimes',
                 'required',
@@ -198,19 +239,26 @@ class DevisController extends Controller
                 'min:0',
                 'max:100',
             ],
+
             'montant_tva' => [
                 'sometimes',
                 'required',
                 'numeric',
                 'min:0',
             ],
+
             'montant_ttc' => [
                 'sometimes',
                 'required',
                 'numeric',
                 'min:0',
             ],
-            'notes' => ['sometimes', 'nullable', 'string'],
+
+            'notes' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -267,7 +315,10 @@ class DevisController extends Controller
 
         return response()->json([
             'message' => 'Devis modifié avec succès.',
-            'devis' => $devis->fresh()->load(['client', 'intervention']),
+            'devis' => $devis->fresh()->load([
+                'client',
+                'intervention',
+            ]),
         ]);
     }
 
@@ -291,5 +342,32 @@ class DevisController extends Controller
         return response()->json([
             'message' => 'Devis supprimé avec succès.',
         ]);
+    }
+
+    public function pdf(Request $request, int $id)
+    {
+        $devis = Devis::where(
+            'entreprise_id',
+            $request->user()->entreprise_id
+        )
+        ->where('id', $id)
+        ->with(['client', 'intervention'])
+        ->first();
+
+        if (!$devis) {
+            return response()->json([
+                'message' => 'Devis introuvable.',
+            ], 404);
+        }
+
+        $pdf = Pdf::loadView('pdf.devis', [
+            'devis' => $devis,
+        ]);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download(
+            'devis-' . $devis->numero . '.pdf'
+        );
     }
 }

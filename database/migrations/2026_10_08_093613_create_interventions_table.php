@@ -1,37 +1,38 @@
 <?php
 
-namespace App\Models;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
-class Intervention extends Model
+return new class extends Migration
 {
-    protected $fillable = [
-        'entreprise_id',
-        'client_id',
-        'titre',
-        'description',
-        'adresse',
-        'code_postal',
-        'ville',
-        'date_prevue',
-        'statut',
-    ];
-
-    /**
-     * Entreprise propriétaire de l'intervention.
-     */
-    public function entreprise(): BelongsTo
+    public function up(): void
     {
-        return $this->belongsTo(Entreprise::class);
+        Schema::create('interventions', function (Blueprint $table) {
+            $table->id();
+
+            $table->foreignId('entreprise_id')
+                ->constrained('entreprises')
+                ->cascadeOnDelete();
+
+            $table->foreignId('client_id')
+                ->constrained('clients')
+                ->cascadeOnDelete();
+
+            $table->string('titre');
+            $table->text('description')->nullable();
+            $table->string('adresse')->nullable();
+            $table->string('code_postal', 10)->nullable();
+            $table->string('ville')->nullable();
+            $table->dateTime('date_prevue')->nullable();
+            $table->string('statut')->default('planifiee');
+
+            $table->timestamps();
+        });
     }
 
-    /**
-     * Client concerné par l'intervention.
-     */
-    public function client(): BelongsTo
+    public function down(): void
     {
-        return $this->belongsTo(Client::class);
+        Schema::dropIfExists('interventions');
     }
-}
+};

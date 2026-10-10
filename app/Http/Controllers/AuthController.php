@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Entreprise;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Validator;
 class AuthController extends Controller
 {
     /**
-     * Inscription d'un professionnel et création de son entreprise.
+     * Création d'un compte ProElec
      */
     public function register(Request $request)
     {
@@ -71,7 +72,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Connexion d'un professionnel.
+     * Connexion avec session Laravel + cookie Sanctum
      */
     public function login(Request $request)
     {
@@ -87,21 +88,39 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!Auth::attempt([
+            'email' => $request->email,
+            'password' => $request->password,
+        ])) {
             return response()->json([
                 'message' => 'Adresse e-mail ou mot de passe incorrect.',
             ], 401);
         }
 
-        $token = $user->createToken('proelec-api')->plainTextToken;
+        // Empêche la réutilisation de l'ancien identifiant de session.
+        $request->session()->regenerate();
+
+        $user = $request->user();
 
         return response()->json([
             'message' => 'Connexion réussie.',
-            'token' => $token,
             'user' => $user,
             'entreprise' => $user->entreprise,
+        ]);
+    }
+
+    /**
+     * Déconnexion
+     */
+    public function logout(Request $request)
+    {
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return response()->json([
+            'message' => 'Déconnexion réussie.',
         ]);
     }
 }

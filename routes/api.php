@@ -3,18 +3,53 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DevisController;
+use App\Http\Controllers\FactureController;
 use App\Http\Controllers\InterventionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// Inscription et connexion
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// Routes réservées aux utilisateurs connectés
 Route::middleware('auth:sanctum')->group(function () {
 
+    // Utilisateur connecté
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    // Statistiques du tableau de bord
+    Route::get('/dashboard/stats', function (Request $request) {
+        $entrepriseId = $request->user()->entreprise_id;
+
+        return response()->json([
+            'clients' => \App\Models\Client::where(
+                'entreprise_id',
+                $entrepriseId
+            )->count(),
+
+            'interventions' => \App\Models\Intervention::where(
+                'entreprise_id',
+                $entrepriseId
+            )->count(),
+
+            'devis' => \App\Models\Devis::where(
+                'entreprise_id',
+                $entrepriseId
+            )->count(),
+
+            'total_devis_ttc' => (float) \App\Models\Devis::where(
+                'entreprise_id',
+                $entrepriseId
+            )->sum('montant_ttc'),
+        ]);
+    });
+
+    // Déconnexion avec middleware de session
+    Route::post('/logout', [AuthController::class, 'logout'])
+        ->middleware('web');
 
     // Clients
     Route::get('/clients', [ClientController::class, 'index']);
@@ -31,7 +66,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // Devis
     Route::get('/devis', [DevisController::class, 'index']);
     Route::get('/devis/{id}', [DevisController::class, 'show']);
+    Route::get('/devis/{id}/pdf', [DevisController::class, 'pdf']);
     Route::post('/devis', [DevisController::class, 'store']);
     Route::put('/devis/{id}', [DevisController::class, 'update']);
     Route::delete('/devis/{id}', [DevisController::class, 'destroy']);
+
+    // Factures
+    Route::get('/factures', [FactureController::class, 'index']);
+    Route::post('/factures', [FactureController::class, 'store']);
+    Route::get('/factures/{id}/pdf', [FactureController::class, 'pdf']);
+
+    // Modification du statut d'une facture
+    Route::patch(
+        '/factures/{id}/statut',
+        [FactureController::class, 'updateStatut']
+    );
 });
