@@ -433,4 +433,40 @@ class IsolationDevisTest extends TestCase
             ->get('/api/devis/' . $devisB->id . '/pdf')
             ->assertNotFound();
     }
+
+    public function test_une_entreprise_peut_telecharger_le_pdf_de_son_propre_devis(): void
+    {
+        [$entreprise, $utilisateur] =
+            $this->creerEntrepriseEtUtilisateur(
+                'Entreprise PDF Test',
+                'pdf@example.com'
+            );
+
+        $client = $this->creerClient(
+            $entreprise->id,
+            'Client PDF Test'
+        );
+
+        $devis = $this->creerDevis(
+            $entreprise->id,
+            $client->id,
+            null,
+            'DEV-PDF-001'
+        );
+
+        $response = $this->actingAs($utilisateur, 'sanctum')
+            ->get('/api/devis/' . $devis->id . '/pdf');
+
+        $response->assertOk();
+
+        $response->assertHeader(
+            'content-type',
+            'application/pdf'
+        );
+
+        $this->assertStringStartsWith(
+            '%PDF-',
+            $response->getContent()
+        );
+    }
 }
