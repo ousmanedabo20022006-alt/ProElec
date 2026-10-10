@@ -16,7 +16,7 @@ class IsolationFacturesTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Crée une entreprise et son utilisateur.
+     * CrÃ©e une entreprise et son utilisateur.
      */
     private function creerEntrepriseEtUtilisateur(string $suffixe): array
     {
@@ -36,7 +36,7 @@ class IsolationFacturesTest extends TestCase
     }
 
     /**
-     * Crée un client appartenant à une entreprise.
+     * CrÃ©e un client appartenant Ã  une entreprise.
      */
     private function creerClient(
         Entreprise $entreprise,
@@ -55,7 +55,7 @@ class IsolationFacturesTest extends TestCase
     }
 
     /**
-     * Crée un devis appartenant à une entreprise et à un client.
+     * CrÃ©e un devis appartenant Ã  une entreprise et Ã  un client.
      */
     private function creerDevis(
         Entreprise $entreprise,
@@ -77,7 +77,7 @@ class IsolationFacturesTest extends TestCase
     }
 
     /**
-     * Crée une facture appartenant à une entreprise.
+     * CrÃ©e une facture appartenant Ã  une entreprise.
      */
     private function creerFacture(
         Entreprise $entreprise,
@@ -101,7 +101,7 @@ class IsolationFacturesTest extends TestCase
     }
 
     /**
-     * Vérifie qu'une entreprise ne voit que ses propres factures.
+     * VÃ©rifie qu'une entreprise ne voit que ses propres factures.
      */
     public function test_une_entreprise_ne_voit_que_ses_propres_factures(): void
     {
@@ -137,8 +137,8 @@ class IsolationFacturesTest extends TestCase
     }
 
     /**
-     * Vérifie qu'une entreprise ne peut pas modifier
-     * le statut d'une facture appartenant à une autre entreprise.
+     * VÃ©rifie qu'une entreprise ne peut pas modifier
+     * le statut d'une facture appartenant Ã  une autre entreprise.
      */
     public function test_une_entreprise_ne_peut_pas_modifier_le_statut_d_une_facture_etrangere(): void
     {
@@ -173,8 +173,8 @@ class IsolationFacturesTest extends TestCase
     }
 
     /**
-     * Vérifie qu'une entreprise ne peut pas télécharger
-     * le PDF d'une facture appartenant à une autre entreprise.
+     * VÃ©rifie qu'une entreprise ne peut pas tÃ©lÃ©charger
+     * le PDF d'une facture appartenant Ã  une autre entreprise.
      */
     public function test_une_entreprise_ne_peut_pas_telecharger_le_pdf_d_une_facture_etrangere(): void
     {
@@ -198,7 +198,7 @@ class IsolationFacturesTest extends TestCase
     }
 
     /**
-     * Vérifie qu'une entreprise ne peut pas créer
+     * VÃ©rifie qu'une entreprise ne peut pas crÃ©er
      * une facture pour le client d'une autre entreprise.
      */
     public function test_une_entreprise_ne_peut_pas_creer_une_facture_pour_le_client_d_une_autre(): void
@@ -222,8 +222,8 @@ class IsolationFacturesTest extends TestCase
     }
 
     /**
-     * Vérifie qu'une entreprise ne peut pas créer
-     * une facture associée au devis d'une autre entreprise.
+     * VÃ©rifie qu'une entreprise ne peut pas crÃ©er
+     * une facture associÃ©e au devis d'une autre entreprise.
      */
     public function test_une_entreprise_ne_peut_pas_creer_une_facture_avec_le_devis_d_une_autre(): void
     {
@@ -251,5 +251,60 @@ class IsolationFacturesTest extends TestCase
                 'taux_tva' => 20,
             ])
             ->assertUnprocessable();
+    }
+
+    /**
+     * Verifie que les numeros des factures sont generes automatiquement.
+     */
+    public function test_la_numerotation_des_factures_est_automatique(): void
+    {
+        [$entreprise, $utilisateur] =
+            $this->creerEntrepriseEtUtilisateur('NUM');
+
+        $client = $this->creerClient($entreprise, 'NUM');
+
+        $this->actingAs($utilisateur, 'sanctum');
+
+        $this->postJson('/api/factures', [
+            'client_id' => $client->id,
+            'date_emission' => '2026-10-01',
+            'montant_ht' => 100,
+            'taux_tva' => 20,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('numero', 'FAC-2026-001');
+
+        $this->postJson('/api/factures', [
+            'client_id' => $client->id,
+            'date_emission' => '2026-10-02',
+            'montant_ht' => 200,
+            'taux_tva' => 20,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('numero', 'FAC-2026-002');
+    }
+
+    /**
+     * Verifie les calculs HT, TVA et TTC lors de la creation.
+     */
+    public function test_les_montants_de_la_facture_sont_calcules_correctement(): void
+    {
+        [$entreprise, $utilisateur] =
+            $this->creerEntrepriseEtUtilisateur('CALC');
+
+        $client = $this->creerClient($entreprise, 'CALC');
+
+        $this->actingAs($utilisateur, 'sanctum')
+            ->postJson('/api/factures', [
+                'client_id' => $client->id,
+                'date_emission' => '2026-10-03',
+                'montant_ht' => 100,
+                'taux_tva' => 20,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('montant_ht', '100.00')
+            ->assertJsonPath('taux_tva', '20.00')
+            ->assertJsonPath('montant_tva', '20.00')
+            ->assertJsonPath('montant_ttc', '120.00');
     }
 }
